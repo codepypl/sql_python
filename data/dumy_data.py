@@ -22,7 +22,8 @@ course_columns = "nazwa_kursu, wydzial_id, prowadzacy_id"
 course_values = [
     ("Podstawy Informatyki", 1, 1),
     ("Analiza Matematyczna", 2, 2),
-    ("Fizyka Kwantowa", 3, 3)
+    ("Fizyka Kwantowa", 3, 3),
+    ("Matematyka dyskretna", 2, 2),
 ]
 grade_columns = "student_id, kurs_id, ocena, data_oceny"
 grade_values = [
