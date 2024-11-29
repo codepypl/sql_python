@@ -1,30 +1,37 @@
 def list_students_with_courses(db):
-    query = """
-    select st.imie, st.nazwisko, k.nazwa_kursu from studenci as st
-    left join student_kurs as sk on sk.student_id=st.student_id
-    left join kursy k on sk.kurs_id = k.kurs_id
-    """
-    results = db.execute_query(query, db_name='uczelnia')
-    return results
+    res = db.select_records(
+        table_name='studenci as st',
+        columns='st.imie, st.nazwisko,k.nazwa_kursu',
+        joins = [
+                "LEFT JOIN student_kurs as sk ON sk.student_id = st.student_id",
+                "LEFT JOIN kursy as k ON sk.kurs_id = k.kurs_id"]
+        ,db_name='uczelnia')
+    return res
+
+
 
 def list_courses_by_department(db, department_name):
-    query = f"""
-    select nazwa_kursu from kursy k
-    right join wydzialy w on k.wydzial_id = w.wydzial_id
-    where w.nazwa_wydzialu = '{department_name}';
-    """
-    results = db.execute_query(query, db_name='uczelnia')
-    return results
+    res = db.select_records(
+        table_name='kursy as k',
+        columns='k.nazwa_kursu',
+        joins = [
+                "LEFT JOIN wydzialy as w ON w.wydzial_id = k.wydzial_id"
+            ],
+        condition=f"w.nazwa_wydzialu = '{department_name}'",
+        db_name='uczelnia')
+    return res
+
 def show_grades_for_student(db, student_id=None, student_name=None):
-    query = f"""
-    SELECT O.ocena, K.nazwa_kursu
-    FROM oceny O
-    JOIN kursy K ON O.kurs_id = K.kurs_id
-    JOIN studenci S ON O.student_id = S.student_id
-    WHERE S.nazwisko = '{student_name}' OR S.student_id = {student_id}
-    """
-    results = db.execute_query(query, db_name='uczelnia')
-    return results
+    res = db.select_records(
+        table_name='oceny as O',
+        columns='O.ocena, K.nazwa_kursu',
+        joins = [
+                "LEFT JOIN kursy as K ON K.kurs_id = O.kurs_id",
+                "LEFT JOIN studenci as S ON S.student_id = O.student_id"
+            ],
+        condition=f"S.student_id = {student_id} OR S.nazwisko = '{student_name}'",
+        db_name='uczelnia')
+    return res
 
 
 def update_student_age(db, student_id, new_age):
@@ -36,53 +43,80 @@ def update_lecturer_name(db, lecturer_id, new_name=None, new_surname=None):
     if new_surname is not None:
         db.update_record('prowadzacy', f'nazwisko = "{new_surname}"', f'prowadzacy_id = {lecturer_id}', db_name='uczelnia')
 
-def delete_unused_course(db, course_id):
-    query = f"SELECT COUNT(*) FROM student_kurs WHERE kurs_id = {course_id}"
-    result = db.select_records(query, db_name='uczelnia')
-    if result[0][0] == 0:
-        db.delete_record('kursy', f'kurs_id = {course_id}', db_name='uczelnia')
+def delete_unused_course(db):
+    res = db.select_records(
+        table_name='kursy as k',
+        columns='k.kurs_id',
+        joins = [
+                "LEFT JOIN student_kurs as sk ON sk.kurs_id = k.kurs_id",
+        ],
+        condition=f"sk.kurs_id IS NULL",
+        db_name='uczelnia')
+
+    delete_course = db.delete_record(
+        table_name='kursy',
+        condition=f"kurs_id = {res[0][0]}",
+        db_name='uczelnia'
+    )
+    return delete_course
+
+
+
 
 def delete_student_with_grades(db, student_id):
     db.delete_record('oceny', f'student_id = {student_id}', db_name='uczelnia')
+    db.delete_record('student_kurs', f'student_id = {student_id}', db_name='uczelnia')
     db.delete_record('studenci', f'student_id = {student_id}', db_name='uczelnia')
 
 def find_students_with_course_and_lecturer(db):
-    query = """
-    SELECT S.imie, S.nazwisko, K.nazwa_kursu, P.imie, P.nazwisko
-    FROM studenci S
-    JOIN student_kurs SK ON S.student_id = SK.student_id
-    JOIN kursy K ON SK.kurs_id = K.kurs_id
-    JOIN prowadzacy P ON K.prowadzacy_id = P.prowadzacy_id
-    """
-    results = db.execute_query(query, db_name='uczelnia')
-    return results
+    res = db.select_records(
+        table_name='studenci as s',
+        columns='s.imie, s.nazwisko, k.nazwa_kursu, p.imie, p.nazwisko',
+        joins = [
+                    "LEFT JOIN student_kurs SK ON S.student_id = SK.student_id",
+                    "JOIN kursy K ON SK.kurs_id = K.kurs_id",
+                    "JOIN prowadzacy P ON K.prowadzacy_id = P.prowadzacy_id"
+        ],
+        db_name='uczelnia'
+    )
+    return res
 
 def list_departments_with_course_count(db):
-    query = """
-    SELECT W.nazwa_wydzialu, COUNT(K.kurs_id)
-    FROM wydzialy W
-    LEFT JOIN kursy K ON W.wydzial_id = K.wydzial_id
-    GROUP BY W.nazwa_wydzialu
-    """
-    results = db.execute_query(query, db_name='uczelnia')
-    return results
+    res = db.select_records(
+        table_name='wydzialy as w',
+        columns='w.nazwa_wydzialu, COUNT(k.kurs_id)',
+        joins = [
+                "LEFT JOIN kursy as k ON k.wydzial_id = w.wydzial_id"
+            ],
+        group_by='w.nazwa_wydzialu',
+        db_name='uczelnia'
+    )
+    return res
+
 
 def find_students_with_high_grades(db):
-    query = """
-    SELECT DISTINCT S.imie, S.nazwisko
-    FROM studenci S
-    JOIN oceny O ON S.student_id = O.student_id
-    WHERE O.ocena > 4.0
-    """
-    results = db.execute_query(query, db_name='uczelnia')
-    return results
+    res = db.select_records(
+        table_name='studenci as s',
+        columns='s.imie, s.nazwisko',
+        joins = [
+                "LEFT JOIN oceny as o ON o.student_id = s.student_id"
+            ],
+        condition= f"o.ocena > 4.0",
+        group_by='s.student_id',
+        db_name='uczelnia'
+    )
+    return res
+
 
 def average_grade_for_courses(db):
-    query = """
-    SELECT K.nazwa_kursu, AVG(O.ocena)
-    FROM kursy K
-    JOIN oceny O ON K.kurs_id = O.kurs_id
-    GROUP BY K.nazwa_kursu
-    """
-    results = db.execute_query(query, db_name='uczelnia')
-    return results
+    res = db.select_records(
+        table_name='kursy as k',
+        columns='k.nazwa_kursu, AVG(o.ocena)',
+        joins = [
+                "LEFT JOIN oceny as o ON o.kurs_id = k.kurs_id"
+            ],
+        group_by='k.nazwa_kursu',
+        db_name='uczelnia'
+    )
+    return res
+
