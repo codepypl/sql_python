@@ -56,6 +56,7 @@ print(f'------wstawianie danych testowych do tabeli student_kurs----')
 for values in data.student_course_values:
     db.insert_record('student_kurs', data.student_course_columns, f"{values[0]}, {values[1]}", db_name='uczelnia')
 
+
 # operacje crud - zad4
 # create
 db.insert_record('studenci', data.student_columns, "'Łukasz', 'Nowak', 28, 'Gryfów-Śląski'", db_name='uczelnia')
@@ -76,11 +77,10 @@ update_student_age(db, 1, 29)
 update_lecturer_name(db, 1, new_name='Przemek', new_surname='Tomaszewski')
 #
 # delete
-# # Usunięcie kursu, który nie jest przypisany do żadnego studenta ani przedmiotu
-# delete_unused_course(db, 5)
+delete_unused_course(db)
 #
 # # Usunięcie studenta wraz ze wszystkimi jego ocenami z kursów
-# delete_student_with_grades(db, 1)
+delete_student_with_grades(db, 1)
 #
 # # Zadania analityczne - zad 5
 # Znajdź i wyświetl imiona i nazwiska wszystkich studentów oraz nazwę kursu,
