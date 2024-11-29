@@ -143,24 +143,39 @@ class Db:
             self.close()
         return True
 
-    def select_records(self, table_name, columns="*", condition=None, order_by=None, group_by=None, db_name=None):
+    def select_records(self, table_name=None, columns="*", joins=None, condition=None, order_by=None, group_by=None,
+                       query=None, db_name=None):
         try:
             self.connect()
             if db_name:
                 self._use_database(db_name)
-            query = f"SELECT {columns} FROM {table_name}"
-            if condition:
-                query += f" WHERE {condition}"
-            if group_by:
-                query += f" GROUP BY {group_by}"
-            if order_by:
-                query += f" ORDER BY {order_by}"
-            self.cursor.execute(query)
+
+            if query:
+                full_query = query
+            else:
+                full_query = f"SELECT {columns} FROM {table_name}"
+
+                if joins:
+                    for join in joins:
+                        full_query += f" {join}"  # Dodaj każde złączenie (JOIN)
+
+                if condition:
+                    full_query += f" WHERE {condition}"
+
+                if group_by:
+                    full_query += f" GROUP BY {group_by}"
+
+                if order_by:
+                    full_query += f" ORDER BY {order_by}"
+
+            self.cursor.execute(full_query)
             results = self.cursor.fetchall()
             return results
         except connector.Error as err:
             print(err.msg)
             return False
+        finally:
+            self.close()
 
     def execute_query(self, query, db_name=None):
         try:
