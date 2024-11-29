@@ -157,14 +157,10 @@ class Db:
                 query += f" ORDER BY {order_by}"
             self.cursor.execute(query)
             results = self.cursor.fetchall()
-            for row in results:
-                print(row)
+            return results
         except connector.Error as err:
             print(err.msg)
             return False
-        finally:
-            self.close()
-        return True
 
     def execute_query(self, query, db_name=None):
         try:
